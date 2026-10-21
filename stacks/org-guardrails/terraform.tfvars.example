@@ -1,0 +1,25 @@
+management_account_id = "111111111111"
+name_prefix           = "banco"
+
+# Mesma allowlist de envs/*/terraform.tfvars (inclui o modelo de embeddings).
+allowed_model_ids = [
+  "anthropic.claude-3-haiku-20240307-v1:0",
+  "amazon.nova-pro-v1:0",
+  "amazon.titan-embed-text-v2:0",
+]
+
+# OU das contas de workload de IA (inclui a conta "AI Platform").
+target_ids = ["ou-abcd-11111111"]
+
+exempt_principal_arns = [
+  "arn:aws:iam::*:role/OrganizationAccountAccessRole",
+  "arn:aws:iam::*:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_BreakGlass_*",
+]
+
+# Só o pipeline de IaC da plataforma pode mexer em CloudTrail e invocation logging.
+logging_admin_principal_arns = [
+  "arn:aws:iam::*:role/aip-terraform-deployer",
+]
+
+owner       = "plataforma-ia"
+cost_center = "CC-1234"

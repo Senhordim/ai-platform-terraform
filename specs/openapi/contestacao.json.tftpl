@@ -1,0 +1,60 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Contestações (somente leitura)",
+    "version": "1.0.0",
+    "description": "Consulta contestações (MED/chargeback) abertas pelo cliente. Abertura de contestação NÃO é exposta ao agente."
+  },
+  "servers": [{ "url": "${base_url}" }],
+  "paths": {
+    "/contestacoes/{protocolo}": {
+      "get": {
+        "operationId": "getContestacao",
+        "summary": "Consulta uma contestação pelo protocolo",
+        "parameters": [
+          {
+            "name": "protocolo",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^[0-9]{6,20}$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contestação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "protocolo": { "type": "string" },
+                    "tipo": { "type": "string", "enum": ["MED_PIX", "CHARGEBACK_CARTAO", "TARIFA"] },
+                    "situacao": { "type": "string", "enum": ["ABERTA", "EM_ANALISE", "DEFERIDA", "INDEFERIDA"] },
+                    "prazoResposta": { "type": "string", "format": "date" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Contestação não encontrada" }
+        }
+      }
+    },
+    "/contestacoes/cliente/{clienteId}": {
+      "get": {
+        "operationId": "listContestacoesCliente",
+        "summary": "Lista contestações do cliente em atendimento",
+        "parameters": [
+          { "name": "clienteId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "situacao", "in": "query", "required": false, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de contestações",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "type": "object" } } } }
+          }
+        }
+      }
+    }
+  }
+}

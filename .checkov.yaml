@@ -1,0 +1,12 @@
+# Checkov — o build falha em QUALQUER check não justificado. Exceções são
+# feitas no próprio recurso com "#checkov:skip=<ID>:<justificativa>", nunca
+# globalmente. (Severidades HIGH/CRITICAL só existem com API key da Prisma
+# Cloud; sem ela, tratamos tudo como bloqueante — critério mais rígido.)
+framework:
+  - terraform
+  - github_actions
+directory:
+  - .
+download-external-modules: false
+compact: true
+quiet: true

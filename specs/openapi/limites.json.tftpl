@@ -1,0 +1,52 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Limites (somente leitura)",
+    "version": "1.0.0",
+    "description": "Consulta limites de PIX e de cartão do cliente. Alteração de limite NÃO é exposta ao agente."
+  },
+  "servers": [{ "url": "${base_url}" }],
+  "paths": {
+    "/limites/clientes/{clienteId}": {
+      "get": {
+        "operationId": "getLimitesCliente",
+        "summary": "Consulta limites vigentes do cliente",
+        "parameters": [
+          { "name": "clienteId", "in": "path", "required": true, "schema": { "type": "string" } },
+          {
+            "name": "produto",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["PIX_DIURNO", "PIX_NOTURNO", "CARTAO_CREDITO"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Limites",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "clienteId": { "type": "string" },
+                    "limites": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "produto": { "type": "string" },
+                          "valorTotal": { "type": "number" },
+                          "valorDisponivel": { "type": "number" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

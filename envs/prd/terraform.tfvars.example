@@ -1,0 +1,160 @@
+# Copie para terraform.tfvars e ajuste. Nenhum segredo neste arquivo.
+
+# ------------------------------------------------------------- Conta ----
+region           = "sa-east-1"
+environment      = "prd"
+account_id       = "444444444444" # conta de workload "AI Platform" (prd)
+bucket_namespace = "banco"
+
+owner               = "plataforma-ia"
+cost_center         = "CC-1234"
+data_classification = "confidencial"
+
+# -------------------------------------------------------------- Rede ----
+vpc_cidr           = "10.61.0.0/16"
+transit_gateway_id = "tgw-0123456789abcdef0" # compartilhado via RAM pela conta de rede
+onprem_cidrs       = ["10.0.0.0/12"]
+
+# Vazia = nenhum egress externo. Para IdP SaaS no ALB (authenticate-oidc),
+# inclua apenas os domínios do IdP e ligue alb_idp_egress_via_firewall.
+egress_allowed_domains = []
+# egress_allowed_domains = ["login.microsoftonline.com", ".okta.com"]
+
+additional_interface_endpoint_services = []
+
+# --------------------------------------------------------- Segurança ----
+key_admin_role_arns      = ["arn:aws:iam::444444444444:role/aip-terraform-deployer"]
+platform_admin_role_arns = ["arn:aws:iam::444444444444:role/aip-terraform-deployer"]
+
+enable_config                     = true
+create_config_service_linked_role = true
+enable_guardduty                  = true
+enable_macie                      = true
+
+# ---------------------------------------------------- Observabilidade ----
+log_retention_days          = 400
+cloudtrail_object_lock_mode = "COMPLIANCE"
+cloudtrail_object_lock_days = 1827 # 5 anos
+siem_destination_arn        = "arn:aws:logs:sa-east-1:333333333333:destination:siem-ai-platform"
+
+# ------------------------------------------------------ LLM Gateway ① ----
+# Somente model IDs in-region (sem us./global.). Confirme a disponibilidade
+# em sa-east-1 no console do Bedrock antes do apply.
+allowed_model_ids = [
+  "anthropic.claude-3-haiku-20240307-v1:0",
+  "amazon.nova-pro-v1:0",
+  "amazon.titan-embed-text-v2:0",
+]
+
+denied_topics = {
+  recomendacao-investimento = {
+    definition = "Recomendar, sugerir ou comparar produtos de investimento, ações, fundos ou criptoativos para o cliente."
+    examples   = ["Em qual fundo o cliente deveria investir?", "Vale a pena comprar bitcoin agora?"]
+  }
+  aconselhamento-juridico = {
+    definition = "Dar orientação jurídica, interpretar contratos ou opinar sobre processos judiciais do cliente."
+    examples   = ["O cliente pode processar o banco por isso?"]
+  }
+  promessa-estorno = {
+    definition = "Prometer, garantir ou confirmar estorno, devolução ou ressarcimento de valores sem decisão registrada da área responsável."
+    examples   = ["Pode dizer ao cliente que o dinheiro volta amanhã?"]
+  }
+}
+
+# ----------------------------------------------- Registro de casos ③ ----
+use_cases = {
+  copiloto-central = {
+    display_name          = "Copiloto da Central de Atendimento"
+    business_owner        = "gerente.atendimento@banco.com.br"
+    technical_owner       = "lider.plataforma-ia@banco.com.br"
+    risk_classification   = "medio"
+    allowed_models        = ["anthropic.claude-3-haiku-20240307-v1:0", "amazon.nova-pro-v1:0"]
+    allowed_tools         = ["pix-status", "contestacao", "limites"]
+    monthly_budget_usd    = 5000
+    knowledge_base_access = true
+    container_image_tag   = "1.0.0"
+  }
+}
+
+# --------------------------------------------------- Tool Gateway ② ----
+# effect = "read" | "write". Tools "write" são registradas, mas sem policy
+# de permit (negadas) — e o módulo recusa write enquanto allow_write_tools = false.
+tools = {
+  pix-status = {
+    description       = "Status de transação PIX pelo E2E ID"
+    effect            = "read"
+    openapi_spec_path = "../../specs/openapi/pix-status.json.tftpl"
+    core_base_path    = "pix"
+    operations        = ["getPixStatus"]
+    oauth_scopes      = ["pix.status.read"]
+  }
+  contestacao = {
+    description       = "Consulta de contestações (MED PIX, chargeback)"
+    effect            = "read"
+    openapi_spec_path = "../../specs/openapi/contestacao.json.tftpl"
+    core_base_path    = "contestacoes"
+    operations        = ["getContestacao", "listContestacoesCliente"]
+    oauth_scopes      = ["contestacao.read"]
+  }
+  limites = {
+    description       = "Consulta de limites de PIX e cartão"
+    effect            = "read"
+    openapi_spec_path = "../../specs/openapi/limites.json.tftpl"
+    core_base_path    = "limites"
+    operations        = ["getLimitesCliente"]
+    oauth_scopes      = ["limites.read"]
+  }
+}
+
+policy_enforcement_mode = "ENFORCE"
+
+# IdP corporativo (exemplo Okta; para Entra ID use
+# https://login.microsoftonline.com/<tenant>/v2.0/.well-known/openid-configuration,
+# idp_scope_claim_name = "scp" e token_exchange_grant_type = "JWT_AUTHORIZATION_GRANT").
+idp_discovery_url        = "https://banco.okta.com/oauth2/aus1234567890/.well-known/openid-configuration"
+idp_allowed_audiences    = ["api://ai-platform-prd"]
+idp_allowed_clients      = []
+idp_scope_claim_name     = "scope"
+token_exchange_client_id = "0oa1234567890tokenx"
+
+enable_outbound_identity_federation = true
+
+core_api_hostname = "apis-core.banco.intra"
+core_target_ips   = ["10.1.20.11", "10.1.20.12"]
+
+manage_apigw_account_settings = true
+
+# ------------------------------------------------- Knowledge Base ④ ----
+embedding_model_id    = "amazon.titan-embed-text-v2:0"
+embedding_dimensions  = 1024
+aoss_standby_replicas = "ENABLED"
+
+# ---------------------------------------------------------- Entrada ----
+alb_certificate_arn      = "arn:aws:acm:sa-east-1:444444444444:certificate/00000000-0000-0000-0000-000000000000"
+alb_allowed_client_cidrs = ["10.20.0.0/16"] # rede das estações da central
+
+alb_oidc = {
+  issuer                 = "https://banco.okta.com/oauth2/aus1234567890"
+  authorization_endpoint = "https://banco.okta.com/oauth2/aus1234567890/v1/authorize"
+  token_endpoint         = "https://banco.okta.com/oauth2/aus1234567890/v1/token"
+  user_info_endpoint     = "https://banco.okta.com/oauth2/aus1234567890/v1/userinfo"
+  client_id              = "0oa1234567890alb"
+  scope                  = "openid profile email pix.status.read contestacao.read limites.read"
+}
+alb_oidc_client_secret_arn  = "arn:aws:secretsmanager:sa-east-1:444444444444:secret:aip-prd/alb-oidc-client-secret-AbCdEf"
+alb_target_ips              = []
+alb_idp_egress_via_firewall = false
+alb_idp_egress_cidrs        = []
+
+# -------------------------------------------------------- Avaliação ⑥ ----
+ci_oidc_provider_arn  = "arn:aws:iam::444444444444:oidc-provider/token.actions.githubusercontent.com"
+ci_oidc_provider_host = "token.actions.githubusercontent.com"
+ci_oidc_subjects      = ["repo:banco/ai-platform:environment:prd"]
+
+# ------------------------------------------------------------ FinOps ----
+budget_alert_emails = ["finops@banco.com.br", "lider.plataforma-ia@banco.com.br"]
+enable_cur_export   = true
+
+# --------------------------------------------------------- Proteções ----
+deletion_protection = true
+force_destroy       = false

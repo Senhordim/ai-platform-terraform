@@ -1,0 +1,47 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Status de PIX (somente leitura)",
+    "version": "1.0.0",
+    "description": "Consulta o status de uma transação PIX pelo identificador fim a fim (E2E)."
+  },
+  "servers": [{ "url": "${base_url}" }],
+  "paths": {
+    "/pix/transacoes/{endToEndId}": {
+      "get": {
+        "operationId": "getPixStatus",
+        "summary": "Consulta o status de uma transação PIX",
+        "description": "Retorna status, valor, data/hora e motivo de recusa (se houver) de um PIX do cliente em atendimento. Não altera nada.",
+        "parameters": [
+          {
+            "name": "endToEndId",
+            "in": "path",
+            "required": true,
+            "description": "Identificador fim a fim do PIX (32 caracteres, começa com E).",
+            "schema": { "type": "string", "pattern": "^E[0-9A-Za-z]{31}$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status do PIX",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "endToEndId": { "type": "string" },
+                    "status": { "type": "string", "enum": ["EM_PROCESSAMENTO", "LIQUIDADO", "REJEITADO", "DEVOLVIDO"] },
+                    "valor": { "type": "number" },
+                    "dataHora": { "type": "string", "format": "date-time" },
+                    "motivoRejeicao": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "PIX não encontrado para o cliente" }
+        }
+      }
+    }
+  }
+}
